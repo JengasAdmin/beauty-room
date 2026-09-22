@@ -93,38 +93,57 @@ export async function callYandexGPT(
 }
 
 // Бесплатный тариф OpenRouter (модели с суффиксом :free) — запасной AI без оплаты.
+// Бесплатные модели живут в общем пуле и часто отдают 429 — пробуем несколько по очереди.
+const OPENROUTER_FALLBACK_MODELS = [
+  'nvidia/nemotron-3-super-120b-a12b:free',
+  'qwen/qwen3.8-27b:free',
+  'z-ai/glm-5.2:free',
+  'google/gemma-4-31b-it:free',
+  'nvidia/nemotron-3-ultra-550b-a55b:free',
+];
+
 export async function callOpenRouter(
   apiKey: string,
   messages: ChatMessage[]
 ): Promise<string | null> {
-  try {
-    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-        'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
-        'X-Title': 'Beauty Room',
-      },
-      body: JSON.stringify({
-        model: process.env.OPENROUTER_MODEL || 'qwen/qwen3.8-27b:free',
-        messages: [{ role: 'system', content: BEAUTY_AI_SYSTEM_PROMPT }, ...messages],
-        max_tokens: 800,
-        temperature: 0.7,
-      }),
-      signal: AbortSignal.timeout(30000),
-    });
-    if (!res.ok) {
+  const configured = process.env.OPENROUTER_MODEL;
+  const models = Array.from(
+    new Set<string>([configured, ...OPENROUTER_FALLBACK_MODELS].filter(Boolean) as string[])
+  );
+
+  for (const model of models) {
+    try {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+          'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
+          'X-Title': 'Beauty Room',
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: 'system', content: BEAUTY_AI_SYSTEM_PROMPT }, ...messages],
+          max_tokens: 800,
+          temperature: 0.7,
+        }),
+        signal: AbortSignal.timeout(30000),
+      });
+      if (!res.ok) {
+        console.warn(
+          `[Beauty AI] OpenRouter (${model}) ответил ${res.status}: ${await res.text().catch(() => 'нет деталей')}`
+        );
+        continue;
+      }
+      const data = await res.json();
+      const text = data?.choices?.[0]?.message?.content;
+      if (typeof text === 'string' && text.trim()) return text;
+    } catch (e) {
       console.warn(
-        `[Beauty AI] OpenRouter ответил ${res.status}: ${await res.text().catch(() => 'нет деталей')}`
+        `[Beauty AI] OpenRouter (${model}) недоступен:`,
+        e instanceof Error ? e.message : e
       );
-      return null;
     }
-    const data = await res.json();
-    const text = data?.choices?.[0]?.message?.content;
-    return typeof text === 'string' && text.trim() ? text : null;
-  } catch (e) {
-    console.warn('[Beauty AI] OpenRouter недоступен:', e instanceof Error ? e.message : e);
-    return null;
   }
+  return null;
 }
