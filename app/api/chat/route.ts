@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   callDeepSeek,
+  callOpenRouter,
   callYandexGPT,
   demoReply,
   getProvider,
@@ -46,6 +47,19 @@ export async function POST(req: NextRequest) {
 
   if (provider === 'yandexgpt' && apiKey) {
     const reply = await callYandexGPT(apiKey, messages);
+    if (reply) return NextResponse.json({ reply, demo: false });
+  }
+
+  if (provider === 'openrouter' && apiKey) {
+    const reply = await callOpenRouter(apiKey, messages);
+    if (reply) return NextResponse.json({ reply, demo: false });
+  }
+
+  // Бесплатный запасной AI: OpenRouter :free-модели (если задан OPENROUTER_API_KEY),
+  // полезен когда основной провайдер недоступен (например, нет баланса).
+  const openRouterKey = process.env.OPENROUTER_API_KEY;
+  if (openRouterKey && provider !== 'openrouter') {
+    const reply = await callOpenRouter(openRouterKey, messages);
     if (reply) return NextResponse.json({ reply, demo: false });
   }
 
