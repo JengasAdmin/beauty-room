@@ -10,6 +10,17 @@ import {
 
 export const runtime = 'nodejs';
 
+// CORS: статическая версия сайта (GitHub Pages) отправляет запросы на этот бэкенд.
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS });
+}
+
 export async function POST(req: NextRequest) {
   let messages: ChatMessage[] = [];
   try {
@@ -35,24 +46,24 @@ export async function POST(req: NextRequest) {
 
   const lastUser = [...messages].reverse().find((m) => m.role === 'user');
   if (!lastUser) {
-    return NextResponse.json({ reply: demoReply(''), demo: true });
+    return NextResponse.json({ reply: demoReply(''), demo: true }, { headers: CORS });
   }
 
   const { provider, apiKey } = getProvider();
 
   if (provider === 'deepseek' && apiKey) {
     const reply = await callDeepSeek(apiKey, messages);
-    if (reply) return NextResponse.json({ reply, demo: false });
+    if (reply) return NextResponse.json({ reply, demo: false }, { headers: CORS });
   }
 
   if (provider === 'yandexgpt' && apiKey) {
     const reply = await callYandexGPT(apiKey, messages);
-    if (reply) return NextResponse.json({ reply, demo: false });
+    if (reply) return NextResponse.json({ reply, demo: false }, { headers: CORS });
   }
 
   if (provider === 'openrouter' && apiKey) {
     const reply = await callOpenRouter(apiKey, messages);
-    if (reply) return NextResponse.json({ reply, demo: false });
+    if (reply) return NextResponse.json({ reply, demo: false }, { headers: CORS });
   }
 
   // Бесплатный запасной AI: OpenRouter :free-модели (если задан OPENROUTER_API_KEY),
@@ -60,8 +71,8 @@ export async function POST(req: NextRequest) {
   const openRouterKey = process.env.OPENROUTER_API_KEY;
   if (openRouterKey && provider !== 'openrouter') {
     const reply = await callOpenRouter(openRouterKey, messages);
-    if (reply) return NextResponse.json({ reply, demo: false });
+    if (reply) return NextResponse.json({ reply, demo: false }, { headers: CORS });
   }
 
-  return NextResponse.json({ reply: demoReply(lastUser.content), demo: true });
+  return NextResponse.json({ reply: demoReply(lastUser.content), demo: true }, { headers: CORS });
 }

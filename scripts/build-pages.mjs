@@ -20,6 +20,8 @@ try {
       ...process.env,
       STATIC_EXPORT: '1',
       NEXT_PUBLIC_BASE_PATH: process.env.NEXT_PUBLIC_BASE_PATH || '/beauty-room',
+      // На GitHub Pages нет серверной части — API-запросы уходят на Vercel-бэкенд.
+      NEXT_PUBLIC_API_BASE: process.env.NEXT_PUBLIC_API_BASE || 'https://beauty-room-dadodum666123-5116.vercel.app',
     },
   });
 } finally {

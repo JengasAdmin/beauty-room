@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
 
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS });
+}
+
 const PLANNED_PROVIDERS = ['ЮKassa', 'CloudPayments', 'Stripe'];
 
 export async function POST(req: NextRequest) {
@@ -10,18 +20,27 @@ export async function POST(req: NextRequest) {
     const { requestId, tariff } = body ?? {};
 
     if (!requestId || !tariff) {
-      return NextResponse.json({ error: 'Некорректный запрос оплаты.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Некорректный запрос оплаты.' },
+        { status: 400, headers: CORS }
+      );
     }
 
     // Оплата на первом этапе не подключена.
     // В будущем здесь — создание платежной сессии у провайдера (ЮKassa / CloudPayments / Stripe).
     // Платёжные данные пользователя не сохраняются и не обрабатываются.
-    return NextResponse.json({
-      status: 'payment_pending',
-      message: 'Оплата будет доступна после подтверждения консультации специалистом.',
-      plannedProviders: PLANNED_PROVIDERS,
-    });
+    return NextResponse.json(
+      {
+        status: 'payment_pending',
+        message: 'Оплата будет доступна после подтверждения консультации специалистом.',
+        plannedProviders: PLANNED_PROVIDERS,
+      },
+      { headers: CORS }
+    );
   } catch {
-    return NextResponse.json({ error: 'Не удалось обработать запрос оплаты.' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Не удалось обработать запрос оплаты.' },
+      { status: 500, headers: CORS }
+    );
   }
 }

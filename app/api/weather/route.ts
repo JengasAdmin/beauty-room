@@ -4,6 +4,16 @@ import type { WeatherData } from '@/types';
 
 export const runtime = 'nodejs';
 
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS });
+}
+
 const CODE_MAP: [number[], string][] = [
   [[0], 'Ясно'],
   [[1, 2, 3], 'Переменная облачность'],
@@ -21,7 +31,8 @@ function codeToCondition(code: number): string {
 
 export async function GET(req: NextRequest) {
   const city = req.nextUrl.searchParams.get('city')?.trim();
-  if (!city) return NextResponse.json({ error: 'Укажите город' }, { status: 400 });
+  if (!city)
+    return NextResponse.json({ error: 'Укажите город' }, { status: 400, headers: CORS });
 
   try {
     const geoRes = await fetch(
@@ -61,9 +72,9 @@ export async function GET(req: NextRequest) {
       }),
       demo: false,
     };
-    return NextResponse.json(data);
+    return NextResponse.json(data, { headers: CORS });
   } catch {
     // Open-Meteo недоступен или город не найден — graceful fallback на demo-данные
-    return NextResponse.json(demoWeather(city));
+    return NextResponse.json(demoWeather(city), { headers: CORS });
   }
 }
