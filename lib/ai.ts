@@ -126,6 +126,9 @@ export async function callOpenRouter(
           messages: [{ role: 'system', content: BEAUTY_AI_SYSTEM_PROMPT }, ...messages],
           max_tokens: 800,
           temperature: 0.7,
+          // «Размышляющие» бесплатные модели (Nemotron и т.п.) иначе протаскивают
+          // внутренние рассуждения в видимый ответ.
+          reasoning: { enabled: false },
         }),
         signal: AbortSignal.timeout(30000),
       });
